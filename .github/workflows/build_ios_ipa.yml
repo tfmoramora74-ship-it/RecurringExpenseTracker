@@ -1,0 +1,92 @@
+name: Build iOS IPA (unsigned)
+
+# Builds an unsigned .ipa for sideloading (e.g. LiveContainer re-signs it on device).
+# No Apple developer account or signing secrets are needed.
+
+on:
+  workflow_dispatch:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - '**.md'
+      - 'fastlane/**'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: build-ios-ipa-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build_ipa:
+    name: Build unsigned IPA
+    runs-on: macos-latest
+    timeout-minutes: 90
+
+    steps:
+      - name: Select Xcode
+        uses: maxim-lobanov/setup-xcode@v1
+        with:
+          xcode-version: latest-stable
+
+      - name: Checkout Repository
+        uses: actions/checkout@v6
+
+      - name: Set up Java 21 (Temurin)
+        uses: actions/setup-java@v5
+        with:
+          distribution: 'temurin'
+          java-version: '21'
+
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v6
+
+      - name: Show toolchain
+        run: |
+          xcodebuild -version
+          java -version
+
+      # The Xcode project runs ./gradlew :shared:embedAndSignAppleFrameworkForXcode
+      # in a build phase, so this single step builds the Kotlin framework and the app.
+      - name: Build app (Release, unsigned)
+        run: |
+          set -o pipefail
+          xcodebuild \
+            -project iosApp/iosApp.xcodeproj \
+            -scheme iosApp \
+            -configuration Release \
+            -sdk iphoneos \
+            -destination 'generic/platform=iOS' \
+            -derivedDataPath build/ios \
+            CODE_SIGNING_ALLOWED=NO \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGN_IDENTITY="" \
+            build 2>&1 | tee xcodebuild.log
+
+      - name: Package IPA
+        run: |
+          APP="build/ios/Build/Products/Release-iphoneos/RecurringExpenseTracker.app"
+          test -d "$APP"
+          VERSION=$(/usr/libexec/PlistBuddy -c 'Print :CFBundleShortVersionString' "$APP/Info.plist" || echo unknown)
+          echo "IPA_NAME=RecurringExpenseTracker-${VERSION}-unsigned.ipa" >> "$GITHUB_ENV"
+          mkdir -p ipa/Payload
+          cp -R "$APP" ipa/Payload/
+          (cd ipa && zip -qry "../RecurringExpenseTracker-${VERSION}-unsigned.ipa" Payload)
+          ls -la ./*.ipa
+
+      - name: Upload IPA
+        uses: actions/upload-artifact@v7
+        with:
+          name: RecurringExpenseTracker-ios-unsigned
+          path: ${{ env.IPA_NAME }}
+          if-no-files-found: error
+
+      - name: Upload build log on failure
+        if: failure()
+        uses: actions/upload-artifact@v7
+        with:
+          name: xcodebuild-log
+          path: xcodebuild.log
+          if-no-files-found: ignore
