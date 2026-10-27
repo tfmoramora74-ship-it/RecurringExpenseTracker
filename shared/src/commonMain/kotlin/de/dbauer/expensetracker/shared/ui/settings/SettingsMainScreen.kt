@@ -13,9 +13,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.AttachMoney
 import androidx.compose.material.icons.rounded.Backup
-import androidx.compose.material.icons.rounded.CurrencyExchange
 import androidx.compose.material.icons.rounded.DarkMode
 import androidx.compose.material.icons.rounded.DateRange
 import androidx.compose.material.icons.rounded.Fingerprint
@@ -62,8 +60,6 @@ import recurringexpensetracker.shared.generated.resources.settings_about_app
 import recurringexpensetracker.shared.generated.resources.settings_backup
 import recurringexpensetracker.shared.generated.resources.settings_backup_create
 import recurringexpensetracker.shared.generated.resources.settings_backup_restore
-import recurringexpensetracker.shared.generated.resources.settings_currency
-import recurringexpensetracker.shared.generated.resources.settings_default_currency
 import recurringexpensetracker.shared.generated.resources.settings_default_tab
 import recurringexpensetracker.shared.generated.resources.settings_general
 import recurringexpensetracker.shared.generated.resources.settings_notifications
@@ -75,8 +71,6 @@ import recurringexpensetracker.shared.generated.resources.settings_notifications
 import recurringexpensetracker.shared.generated.resources.settings_notifications_subtitle
 import recurringexpensetracker.shared.generated.resources.settings_notifications_upcoming
 import recurringexpensetracker.shared.generated.resources.settings_security_biometric_lock
-import recurringexpensetracker.shared.generated.resources.settings_show_converted_currency
-import recurringexpensetracker.shared.generated.resources.settings_system_default
 import recurringexpensetracker.shared.generated.resources.settings_theme_mode
 import recurringexpensetracker.shared.generated.resources.settings_theme_mode_amoled
 import recurringexpensetracker.shared.generated.resources.settings_theme_mode_dark
@@ -109,6 +103,7 @@ fun SettingsMainScreen(
     onClickDefaultCurrency: () -> Unit,
     onClickAbout: () -> Unit,
     modifier: Modifier = Modifier,
+    canBackup: Boolean = true,
     viewModel: SettingsViewModel = koinViewModel<SettingsViewModel>(),
 ) {
     Column(
@@ -156,24 +151,7 @@ fun SettingsMainScreen(
             onClick = onClickTags,
             icon = Icons.Rounded.Tag,
         )
-        SettingsHeaderElement(
-            header = Res.string.settings_currency,
-        )
-        SettingsClickableElement(
-            title = stringResource(Res.string.settings_default_currency),
-            subtitle =
-                viewModel.selectedCurrencyName.ifEmpty {
-                    stringResource(Res.string.settings_system_default)
-                },
-            onClick = onClickDefaultCurrency,
-            icon = Icons.Rounded.AttachMoney,
-        )
-        SettingsClickableElementWithToggle(
-            title = stringResource(Res.string.settings_show_converted_currency),
-            checked = viewModel.showConvertedCurrency.collectAsState().value,
-            icon = Icons.Rounded.CurrencyExchange,
-            onCheckedChange = viewModel::onShowConvertedCurrency,
-        )
+        // No currency settings: the app only supports Brazilian Real.
 
         if (canUseBiometric) {
             SettingsHeaderElement(header = Res.string.settings_title_security)
@@ -247,19 +225,21 @@ fun SettingsMainScreen(
             }
         }
 
-        SettingsHeaderElement(
-            header = Res.string.settings_backup,
-        )
-        SettingsClickableElement(
-            title = stringResource(Res.string.settings_backup_create),
-            onClick = onClickBackup,
-            icon = Icons.Rounded.Backup,
-        )
-        SettingsClickableElement(
-            title = stringResource(Res.string.settings_backup_restore),
-            onClick = onClickRestore,
-            icon = Icons.Rounded.Restore,
-        )
+        if (canBackup) {
+            SettingsHeaderElement(
+                header = Res.string.settings_backup,
+            )
+            SettingsClickableElement(
+                title = stringResource(Res.string.settings_backup_create),
+                onClick = onClickBackup,
+                icon = Icons.Rounded.Backup,
+            )
+            SettingsClickableElement(
+                title = stringResource(Res.string.settings_backup_restore),
+                onClick = onClickRestore,
+                icon = Icons.Rounded.Restore,
+            )
+        }
         SettingsHeaderElement(
             header = Res.string.settings_about,
         )
