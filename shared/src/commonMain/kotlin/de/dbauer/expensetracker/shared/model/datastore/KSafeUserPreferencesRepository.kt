@@ -1,14 +1,18 @@
 package de.dbauer.expensetracker.shared.model.datastore
 
+import Constants
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import de.dbauer.expensetracker.shared.ui.ThemeMode
 import eu.anifantakis.lib.ksafe.KSafe
 import eu.anifantakis.lib.ksafe.KSafeWriteMode
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.emitAll
 import kotlinx.coroutines.flow.flow
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.sync.Mutex
 import kotlinx.coroutines.sync.withLock
 
@@ -56,6 +60,18 @@ class KSafeUserPreferencesRepository(
         override fun collectAsState(): State<T> = get().collectAsState(defaultValue)
     }
 
+    /** A setting the app no longer lets the user change: always [value], saving is ignored. */
+    private class FixedPreference<T>(
+        private val value: T,
+    ) : IUserPreferencesRepository.IPreference<T> {
+        override suspend fun save(value: T) = Unit
+
+        override fun get(): Flow<T> = flowOf(value)
+
+        @Composable
+        override fun collectAsState(): State<T> = remember { mutableStateOf(value) }
+    }
+
     private inline fun <reified T> preference(
         key: String,
         defaultValue: T,
@@ -69,7 +85,10 @@ class KSafeUserPreferencesRepository(
 
     override val gridMode = preference("IS_GRID_MODE", false)
     override val biometricSecurity = preference("BIOMETRIC_SECURITY", false)
-    override val defaultCurrency = preference("DEFAULT_CURRENCY", "")
+    // Single currency app: a previously stored default currency (e.g. the iOS fallback "USD")
+    // must not cause values to be converted, so this is fixed instead of read from storage.
+    override val defaultCurrency: IUserPreferencesRepository.IPreference<String> =
+        FixedPreference(Constants.CURRENCY_CODE)
     override val showConvertedCurrency = preference("SHOW_CONVERTED_CURRENCY", true)
     override val upcomingPaymentNotification = preference("IS_UPCOMING_PAYMENT_NOTIFICATION", false)
     override val themeMode = preference("THEME_MODE", ThemeMode.Amoled.value)
