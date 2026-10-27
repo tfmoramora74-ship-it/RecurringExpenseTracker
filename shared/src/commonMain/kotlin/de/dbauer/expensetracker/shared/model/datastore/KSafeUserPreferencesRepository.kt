@@ -3,6 +3,7 @@ package de.dbauer.expensetracker.shared.model.datastore
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.collectAsState
+import de.dbauer.expensetracker.shared.ui.ThemeMode
 import eu.anifantakis.lib.ksafe.KSafe
 import eu.anifantakis.lib.ksafe.KSafeWriteMode
 import kotlinx.coroutines.flow.Flow
@@ -71,7 +72,7 @@ class KSafeUserPreferencesRepository(
     override val defaultCurrency = preference("DEFAULT_CURRENCY", "")
     override val showConvertedCurrency = preference("SHOW_CONVERTED_CURRENCY", true)
     override val upcomingPaymentNotification = preference("IS_UPCOMING_PAYMENT_NOTIFICATION", false)
-    override val themeMode = preference("THEME_MODE", 0)
+    override val themeMode = preference("THEME_MODE", ThemeMode.Amoled.value)
     override val defaultTab = preference("DEFAULT_TAB", 0)
 
     // default: 8:00 in the morning
