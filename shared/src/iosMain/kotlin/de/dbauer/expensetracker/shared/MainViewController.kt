@@ -61,6 +61,8 @@ fun MainViewController() =
                     onClickBackup = {},
                     onClickRestore = {},
                     updateWidget = {},
+                    // Backup and restore are not implemented on iOS yet, so hide their buttons
+                    canBackup = false,
                 )
             }
         }
