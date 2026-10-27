@@ -1,6 +1,7 @@
 package de.dbauer.expensetracker.shared.model
 
+import Constants
+
 actual fun getSystemCurrencyCode(): String {
-    // TODO: Retrieve system default currency
-    return "USD"
+    return Constants.CURRENCY_CODE
 }
