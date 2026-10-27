@@ -33,6 +33,7 @@ fun ExpenseTextField(
     singleLine: Boolean = false,
     maxLines: Int = if (singleLine) 1 else Int.MAX_VALUE,
     isError: Boolean = false,
+    prefix: (@Composable () -> Unit)? = null,
 ) {
     val supportingText: (@Composable () -> Unit)? =
         if (isError) {
@@ -70,6 +71,7 @@ fun ExpenseTextField(
         maxLines = maxLines,
         supportingText = supportingText,
         trailingIcon = trailingIcon,
+        prefix = prefix,
         modifier = modifier,
     )
 }
