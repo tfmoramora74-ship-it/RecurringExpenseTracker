@@ -70,23 +70,9 @@ class SettingsViewModel(
                 }
             }
 
-    init {
-        viewModelScope.launch {
-            val currenciesList = currencyProvider.retrieveCurrencies()
-            _availableCurrencies.addAll(currenciesList.sortedBy { it.name })
-
-            exchangeRateLastUpdate = exchangeRateProvider.getLastUpdateInfo()
-            userPreferencesRepository.defaultCurrency.get().collect { defaultCurrency ->
-                currenciesList.firstOrNull { it.code == defaultCurrency }?.let { currency ->
-                    selectedCurrencyName = "${currency.name} (${currency.symbol})"
-                    selectedCurrencyCode = currency.code
-                } ?: run {
-                    selectedCurrencyName = ""
-                    selectedCurrencyCode = ""
-                }
-            }
-        }
-    }
+    // The currency list and exchange rates are no longer loaded here: the app only supports
+    // Brazilian Real and the currency settings are not shown, so loading them would only slow
+    // down opening the settings.
 
     fun onClickThemeSelection() {
         showThemeSelectionDialog = true
