@@ -1,5 +1,6 @@
 package de.dbauer.expensetracker.shared.viewmodel
 
+import Constants
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateListOf
@@ -9,7 +10,6 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.snapshotFlow
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import de.dbauer.expensetracker.shared.data.CurrencyOption
 import de.dbauer.expensetracker.shared.data.CurrencyValue
 import de.dbauer.expensetracker.shared.data.Recurrence
 import de.dbauer.expensetracker.shared.data.RecurringExpenseData
@@ -18,7 +18,6 @@ import de.dbauer.expensetracker.shared.data.Tag
 import de.dbauer.expensetracker.shared.model.CurrencyProvider
 import de.dbauer.expensetracker.shared.model.database.IExpenseRepository
 import de.dbauer.expensetracker.shared.model.datastore.IUserPreferencesRepository
-import de.dbauer.expensetracker.shared.model.getSystemCurrencyCode
 import de.dbauer.expensetracker.shared.toFloatLocaleAware
 import de.dbauer.expensetracker.shared.toLocalString
 import kotlinx.coroutines.flow.first
@@ -29,20 +28,17 @@ import kotlin.time.Instant
 class EditRecurringExpenseViewModel(
     private val expenseId: Int?,
     private val expenseRepository: IExpenseRepository,
-    private val currencyProvider: CurrencyProvider,
+    // Unused since the app only supports BRL; kept so the DI and test wiring stay unchanged.
+    @Suppress("unused") private val currencyProvider: CurrencyProvider,
     userPreferencesRepository: IUserPreferencesRepository,
 ) : ViewModel() {
     var nameState by mutableStateOf("")
     val nameInputError = mutableStateOf(false)
     var descriptionState by mutableStateOf("")
     var priceState by mutableStateOf("")
-    var selectedCurrencyOption by mutableStateOf(CurrencyOption("", ""))
-    var availableCurrencyOptions = mutableStateListOf<CurrencyOption>()
     val priceInputError = mutableStateOf(false)
     var everyXRecurrenceState by mutableStateOf("")
     val everyXRecurrenceInputError = mutableStateOf(false)
-    var currencyError by mutableStateOf(false)
-        private set
     var selectedRecurrence by mutableStateOf(Recurrence.Monthly)
     var firstPaymentDate: Instant? by mutableStateOf(null)
     var endDate: Instant? by mutableStateOf(null)
@@ -77,17 +73,10 @@ class EditRecurringExpenseViewModel(
     val showArchiveButton: Boolean get() = !isNewExpense && archivedDate == null
     val showUnarchiveButton: Boolean get() = !isNewExpense && archivedDate != null
 
-    private val defaultCurrency = userPreferencesRepository.defaultCurrency.get()
     private var defaultReminderDays by mutableIntStateOf(0)
 
     init {
         viewModelScope.launch {
-            val availableCurrencies =
-                currencyProvider.retrieveCurrencies().map {
-                    CurrencyOption(it.code, "${it.name} (${it.symbol})")
-                }
-            availableCurrencyOptions.addAll(availableCurrencies)
-
             defaultReminderDays = userPreferencesRepository.upcomingPaymentNotificationDaysAdvance.get().first()
 
             if (expenseId != null) {
@@ -121,15 +110,8 @@ class EditRecurringExpenseViewModel(
                             // Sort reminders initially when loading from database
                             reminders.addAll(expense.reminders.sortedBy { it.daysBeforePayment })
                         }
-
-                        availableCurrencies.firstOrNull { it.currencyCode == expense.price.currencyCode }?.let {
-                            selectedCurrencyOption = it
-                        }
                     }
             } else {
-                availableCurrencies.firstOrNull { it.currencyCode == getDefaultCurrencyCode() }?.let {
-                    selectedCurrencyOption = it
-                }
                 if (notifyForExpense) {
                     reminders.add(Reminder(id = 0, daysBeforePayment = defaultReminderDays))
                 }
@@ -140,7 +122,6 @@ class EditRecurringExpenseViewModel(
                     nameState,
                     descriptionState,
                     priceState,
-                    selectedCurrencyOption,
                     everyXRecurrenceState,
                     selectedRecurrence,
                     firstPaymentDate,
@@ -330,12 +311,12 @@ class EditRecurringExpenseViewModel(
             price =
                 CurrencyValue(
                     priceState.toFloatLocaleAware() ?: 0f,
-                    selectedCurrencyOption.currencyCode,
+                    Constants.CURRENCY_CODE,
                 ),
             monthlyPrice =
                 CurrencyValue(
                     priceState.toFloatLocaleAware() ?: 0f,
-                    selectedCurrencyOption.currencyCode,
+                    Constants.CURRENCY_CODE,
                 ),
             everyXRecurrence = everyXRecurrenceState.toIntOrNull() ?: 1,
             recurrence = selectedRecurrence,
@@ -379,7 +360,6 @@ class EditRecurringExpenseViewModel(
         nameInputError.value = false
         priceInputError.value = false
         everyXRecurrenceInputError.value = false
-        currencyError = false
 
         var everythingCorrect = true
         if (!isNameValid(nameState)) {
@@ -392,10 +372,6 @@ class EditRecurringExpenseViewModel(
         }
         if (!isEveryXRecurrenceValid(everyXRecurrenceState)) {
             everyXRecurrenceInputError.value = true
-            everythingCorrect = false
-        }
-        if (!currencyIsValid(selectedCurrencyOption.currencyName)) {
-            currencyError = true
             everythingCorrect = false
         }
         return everythingCorrect
@@ -411,15 +387,6 @@ class EditRecurringExpenseViewModel(
 
     private fun isEveryXRecurrenceValid(everyXRecurrence: String): Boolean {
         return everyXRecurrence.isBlank() || everyXRecurrence.toIntOrNull() != null
-    }
-
-    private fun currencyIsValid(currency: String): Boolean {
-        val currencyOption = CurrencyOption(selectedCurrencyOption.currencyCode, currency)
-        return currency.isNotBlank() && availableCurrencyOptions.any { it == currencyOption }
-    }
-
-    private suspend fun getDefaultCurrencyCode(): String {
-        return defaultCurrency.first().ifBlank { getSystemCurrencyCode() }
     }
 
     /**
@@ -448,7 +415,6 @@ class EditRecurringExpenseViewModel(
             if (nameState != expense.name) return true
             if (descriptionState != expense.description) return true
             if (priceState != expense.price.value.toLocalString()) return true
-            if (selectedCurrencyOption.currencyCode != expense.price.currencyCode) return true
             if (everyXRecurrenceState != expense.everyXRecurrence.toString()) return true
             if (selectedRecurrence != expense.recurrence) return true
             if (firstPaymentDate != expense.firstPayment) return true
