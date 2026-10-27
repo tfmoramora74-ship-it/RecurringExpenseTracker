@@ -67,6 +67,7 @@ fun SettingsScreen(
     navigateToPermissionsSettings: () -> Unit,
     setTopAppBar: (@Composable () -> Unit) -> Unit,
     modifier: Modifier = Modifier,
+    canBackup: Boolean = true,
 ) {
     val settingsNavController = rememberNavController()
 
@@ -93,6 +94,7 @@ fun SettingsScreen(
                 hasNotificationPermission = hasNotificationPermission,
                 onClickBackup = onClickBackup,
                 onClickRestore = onClickRestore,
+                canBackup = canBackup,
                 onBiometricCheckedChange = onBiometricCheckedChange,
                 requestNotificationPermission = requestNotificationPermission,
                 navigateToPermissionsSettings = navigateToPermissionsSettings,
