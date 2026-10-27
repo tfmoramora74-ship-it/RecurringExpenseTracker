@@ -3,6 +3,7 @@ package de.dbauer.expensetracker.shared
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.window.ComposeUIViewController
@@ -17,14 +18,28 @@ import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
 import org.koin.compose.koinInject
 import org.koin.core.context.startKoin
+import platform.UIKit.UIApplication
+import platform.UIKit.UIUserInterfaceStyle
 
 fun MainViewController() =
     ComposeUIViewController {
         val userPreferencesRepository = koinInject<IUserPreferencesRepository>()
         val isGridMode by userPreferencesRepository.gridMode.collectAsState()
         val selectedTheme by userPreferencesRepository.themeMode.collectAsState()
+        val themeMode = ThemeMode.fromInt(selectedTheme)
 
-        ExpenseTrackerTheme(themeMode = ThemeMode.fromInt(selectedTheme)) {
+        // The app draws behind the status bar, so its text color must follow the app theme
+        // instead of the system appearance.
+        LaunchedEffect(themeMode) {
+            UIApplication.sharedApplication.keyWindow?.overrideUserInterfaceStyle =
+                when (themeMode) {
+                    ThemeMode.FollowSystem -> UIUserInterfaceStyle.UIUserInterfaceStyleUnspecified
+                    ThemeMode.Light -> UIUserInterfaceStyle.UIUserInterfaceStyleLight
+                    ThemeMode.Dark, ThemeMode.Amoled -> UIUserInterfaceStyle.UIUserInterfaceStyleDark
+                }
+        }
+
+        ExpenseTrackerTheme(themeMode = themeMode) {
             Surface(
                 modifier = Modifier.fillMaxSize(),
                 color = MaterialTheme.colorScheme.background,
