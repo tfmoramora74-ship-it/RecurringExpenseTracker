@@ -85,6 +85,7 @@ class KSafeUserPreferencesRepository(
 
     override val gridMode = preference("IS_GRID_MODE", false)
     override val biometricSecurity = preference("BIOMETRIC_SECURITY", false)
+
     // Single currency app: a previously stored default currency (e.g. the iOS fallback "USD")
     // must not cause values to be converted, so this is fixed instead of read from storage.
     override val defaultCurrency: IUserPreferencesRepository.IPreference<String> =
